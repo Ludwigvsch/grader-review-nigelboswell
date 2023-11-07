@@ -1,7 +1,7 @@
 #!/bin/bash
 
 # Define classpath including JUnit and Hamcrest jars
-CPATH='.:lib/hamcrest-core-1.3.jar:lib/junit-4.13.2.jar'
+CPATH='.:../lib/hamcrest-core-1.3.jar:../lib/junit-4.13.2.jar'
 EXPECTED_FILENAME="ListExamples.java"
 
 # Function to clean up before exit
@@ -38,13 +38,13 @@ fi
 
 # Copy the student's submission and the test files to the grading area
 cp student-submission/$EXPECTED_FILENAME grading-area/
-cp YourTestFile.java grading-area/ # Replace with your actual test file
+cp TestListExamples.java grading-area/ # Replace with your actual test file
 
 # Navigate to the grading area
 cd grading-area
 
 # Compile the student code and the test files
-javac -cp "$CPATH" *.java
+javac -cp .:../lib/hamcrest-core-1.3.jar:../lib/junit-4.13.2.jar *.java
 if [ $? -ne 0 ]; then
     echo "Error: Compilation failed."
     cleanup
@@ -53,16 +53,36 @@ else
     echo "Compilation successful."
 fi
 
+# Define the test class name
+TEST_CLASS_NAME="TestListExamples" # Replace with your actual test class name
+
+
+# ...
+
 # Run the tests
-java -cp "$CPATH" org.junit.runner.JUnitCore [YourTestClassName]
-if [ $? -eq 0 ]; then
+TEST_OUTPUT=$(java -cp "$CPATH" org.junit.runner.JUnitCore "$TEST_CLASS_NAME" 2>&1)
+TEST_EXIT_CODE=$?
+
+# Check if JUnitCore class was not found
+if echo "$TEST_OUTPUT" | grep -q "ClassNotFoundException: org.junit.runner.JUnitCore"; then
+    echo "Error: JUnit is not on the classpath or not installed."
+    
+    exit 1
+fi
+
+# Output the test results
+echo "$TEST_OUTPUT"
+
+if [ $TEST_EXIT_CODE -eq 0 ]; then
     echo "All tests passed."
-    # You can add additional logic to calculate the score
 else
-    echo "Some tests failed."
-    # You can add additional logic to extract which tests failed and provide feedback
+    # Parse the output for failed test details
+    echo "Some tests failed. Here are the details:"
+    echo "$TEST_OUTPUT" | grep "FAILURES!!!"
+    echo "$TEST_OUTPUT" | grep "Tests run:"
+    # Extract and print details of each failed test
+    echo "$TEST_OUTPUT" | awk '/[1-9]\) /,/Caused by:/ {if ($0 !~ /Caused by:/) print}'
 fi
 
 # Clean up and return to the original directory
 cd ..
-cleanup
